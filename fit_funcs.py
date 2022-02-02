@@ -11,7 +11,7 @@ def gaussian(x, height, centre, sigma):
 def hyperbolic(z, waist, z_0):
     '''generate hyperbolic function for given beam waist, z positions and wavelength'''  
     # laser wavelength
-    wave = 606e-6
+    wave = 606e-3
     return waist * np.sqrt(1 + ((((z - z_0) * wave)/ (np.pi * waist ** 2)) ** 2))
 
 # fit a gaussian to data by calculating its 'moments' (mean, variance, width, height)
