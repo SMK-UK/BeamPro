@@ -32,12 +32,12 @@ quick_show = 0
 ''' User input information '''
 
 # directory and folder for images
-dir = 'C:\\Users\\sk88\\Documents\\HWSYS\\Desktop\\20211022_606nm_beam'
-folder = 'measurement2'
+dir = 'C:\\Users\\sk88\\Documents\\HWSYS\\Desktop'
+folder = '20220201_995_collimation'
 # image laser wavelength(um)
-wavelength = 606e-3
-# chip and pixel size (um) if known
-chip_size = 2500
+wavelength = 995e-3
+# chip and pixel size (um) if known (Hamamatsu 9.6 x 7.68 mm, DMK 1.411cm)
+chip_size = 1.411 * 1e4 # 9.6 * 1e3 #
 
 ''' Set-up Image file names and processing information '''
 # loops through the images in the specified folder (they should be labelled 1, 2, 3 etc. with
@@ -61,7 +61,7 @@ array_len = int(len(image_list)/2)
 # determine array dimensions for new data
 img = Image.open(path + image_list[0])
 imsize = img.size
-# calculate the dimensions per pixel
+# calculate the dimensions per pixel (um)
 pix_size = chip_size / imsize[0]
 
 if quick_show == 0:
@@ -98,7 +98,7 @@ fit_err = np.empty([array_len, 2, 3])
 
 # check input image type - fitting only works for grayscale image
 flag = 0
-if Image.open(path + image_list[0]).mode != 'L':
+if not Image.open(path + image_list[0]).mode == 'L':
     flag = 1
 
 # read image and subtract background - store in new arrays
@@ -106,28 +106,29 @@ for index, image in enumerate(image_list):
     if flag == 1:
         # break when half way through image list
         if index < array_len:
-            # convert image to greyscale
+            # read then discard image (change to float64 as uint8 does not have -ve values)
             img = Image.open(path + image_list[2 * index])
+            img = np.float64(np.transpose(np.asarray(img.convert(mode='L',matrix =None, dither=None, palette=0, colors=256))))
             bkd = Image.open(path + image_list[2 * index + 1])
-            # read then discard image (change to int32 as uint8 does not have -ve values)
-            img = np.int32(np.transpose(np.asarray(img.convert(mode='L',matrix =None, dither=None, palette=0, colors=256))))
-            bkd = np.int32(np.transpose(np.asarray(bkd.convert(mode='L',matrix =None, dither=None, palette=0, colors=256))))     
+            bkd = np.float64(np.transpose(np.asarray(bkd.convert(mode='L',matrix =None, dither=None, palette=0, colors=256))))    
             # arrays of data, gaussian params, fit and error
             data[index, :, :] = np.absolute(img - bkd)
+            # scale data to maximum 255
+            data[index, :, :] *= 255/data[index, :, :].max()
             fit_data[index, :, :], fit_err[index, :, :] = ff.fitgauss(data[index, :, :])
     else:
         # break when half way through image list
         if index < array_len:
-            # read then discard image (change to int32 as uint8 does not have -ve values)
-            img = np.int32(np.transpose(np.asarray(Image.open(path + image_list[2 * index]))))
-            bkd = np.int32(np.transpose(np.asarray(Image.open(path + image_list[2 * index + 1]))))     
+            # read then discard image (change to float64 as uint8 does not have -ve values)
+            img = np.float64(np.transpose(np.asarray(Image.open(path + image_list[2 * index]))))
+            bkd = np.float64(np.transpose(np.asarray(Image.open(path + image_list[2 * index + 1]))))
             # arrays of data, gaussian params, fit and error
             data[index, :, :] = np.absolute(img - bkd)
             fit_data[index, :, :], fit_err[index, :, :] = ff.fitgauss(data[index, :, :])
 
-# convert data to um
-scale_data = fit_data * pix_size
-scale_err = fit_err * pix_size
+# convert data to um & remove negatives
+scale_data = np.abs(fit_data) * pix_size
+scale_err = np.abs(fit_err) * pix_size
 
 # calcualate percent error
 FWHM_err = np.array(scale_err[:, :, 2] / scale_data[:, :, 2])
@@ -143,9 +144,6 @@ over_e2y = np.sqrt(2/np.log(2)) * FWHM_y
 e2y_err = np.sqrt(2/np.log(2)) * FWHM_yerr
 
 ''' data outputs - check flags for issues '''
-
-x = np.arange(1, imsize[0] + 1, 1)
-y = np.arange(1, imsize[1] + 1, 1)
 
 if quick_show == 0:
 
@@ -184,25 +182,30 @@ if quick_show == 0:
 
     # plot beam diameter and waist fit
     fig_1, ax_1 = mp.subplots(nrows=2, ncols=1, sharex='all', sharey='all', constrained_layout=True)
-    ax_1[0].errorbar(z/1000, over_e2x, yerr = np.ravel(e2x_err), label='1/e^2 Diameter in x', markersize=5, color='red', fmt='x')
-    ax_1[1].errorbar(z/1000, over_e2y, yerr = np.ravel(e2y_err), label='1/e^2 Diameter in y', markersize=5, color='blue', fmt='x')
-    ax_1[0].errorbar(z/1000, FWHM_x, yerr = np.ravel(FWHM_xerr), label='FWHM Diameter in y', markersize=5, color='green', fmt='x')
-    ax_1[0].plot(z_plot/1000, ff.hyperbolic(z_plot, xw[0], xw[1]), linestyle='--', label='FWHM x Fit', color='green')
-    ax_1[1].errorbar(z/1000, FWHM_y, yerr = np.ravel(FWHM_yerr), label='FWHM Diameter in y', markersize=5, color='orange', fmt='x')
-    ax_1[1].plot(z_plot/1000, ff.hyperbolic(z_plot, yw[0], yw[1]), linestyle='--', label='FWHM y Fit', color='orange')
+    ax_1[0].errorbar(z/1000, over_e2x * 1e-3 , yerr = np.ravel(e2x_err) * 1e-3, label='1/e^2 Diameter in x', markersize=5, color='red', fmt='x')
+    ax_1[1].errorbar(z/1000, over_e2y * 1e-3, yerr = np.ravel(e2y_err) * 1e-3, label='1/e^2 Diameter in y', markersize=5, color='blue', fmt='x')
+    ax_1[0].errorbar(z/1000, FWHM_x * 1e-3, yerr = np.ravel(FWHM_xerr) * 1e-3, label='FWHM Diameter in y', markersize=5, color='green', fmt='x')
+    ax_1[0].plot(z_plot/1000, ff.hyperbolic(z_plot, xw[0], xw[1]) * 1e-3, linestyle='--', label='FWHM x Fit', color='green')
+    ax_1[1].errorbar(z/1000, FWHM_y * 1e-3, yerr = np.ravel(FWHM_yerr) * 1e-3, label='FWHM Diameter in y', markersize=5, color='orange', fmt='x')
+    ax_1[1].plot(z_plot/1000, ff.hyperbolic(z_plot, yw[0], yw[1]) * 1e-3, linestyle='--', label='FWHM y Fit', color='orange')
 
     # format plots
     fig_1.suptitle('Beam Waist Fit to Data')
     for ax in ax_1:
-        ax.set(xlabel='Distance from Lens (mm)', ylabel='1/e^2 Width (um)')
+        ax.set(xlabel='Change in Camera Position (mm)', ylabel='1/e^2 Width (mm)')
         ax.legend(loc='best', fontsize=8)
         ax.grid(True)
 
     if plot_save == 1:
         fig_1.savefig(fname=path + folder + '_' + 'beam_waist_fit.pdf', quality=95, format='pdf')
 
+# array for fit to data
+    x = np.arange(1, imsize[0] + 1, 1)
+    y = np.arange(1, imsize[1] + 1, 1)
+
 # plot gaussian fit to data  
 for index in range(array_len):
+    
     # define figure and axes
     fig_2, ax_2 = mp.subplots(figsize=(5, 5))
     # main figure original image
@@ -222,8 +225,8 @@ for index in range(array_len):
     # axis label formatting
     ax_fitx.set_yticks([0, 50, 100, 150])
     ax_fity.set_xticks([0, 50, 100, 150])
-    ax_2.set_xticks(np.arange(0, imsize[0], 50))
-    ax_2.set_yticks(np.arange(0, imsize[0], 50))
+    ax_2.set_xticks(np.arange(0, imsize[0], 150))
+    ax_2.set_yticks(np.arange(0, imsize[1], 150))
     # set limits
     llim = round(fit_data[index, 0, 1]) - 4 * round(fit_data[index, 0, 2])
     rlim = round(fit_data[index, 0, 1]) + 4 * round(fit_data[index, 0, 2])
