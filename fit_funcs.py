@@ -4,6 +4,8 @@
 import numpy as np
 from scipy.optimize import curve_fit
 
+wavelength = 1550e-6
+
 def gaussian(x, height, centre, sigma):
     '''Generates Gaussian with given parameters'''
     return height * np.exp(-(np.power(x - centre, 2) / (2 * sigma ** 2)))
@@ -11,8 +13,8 @@ def gaussian(x, height, centre, sigma):
 def hyperbolic(z, waist, z_0):
     '''generate hyperbolic function for given beam waist, z positions and wavelength'''  
     # laser wavelength
-    wave = 995e-3
-    return waist * np.sqrt(1 + ((((z - z_0) * wave)/ (np.pi * waist ** 2)) ** 2))
+
+    return waist * np.sqrt(1 + ((((z - z_0) * wavelength)/ (np.pi * waist ** 2)) ** 2))
 
 # fit a gaussian to data by calculating its 'moments' (mean, variance, width, height)
 def moments(data):

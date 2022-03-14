@@ -2,7 +2,6 @@
 Sean Keenan, 5th Year MPhys Heriot-Watt University, Edinburgh
 Quantum memories group - QPL Heriot-Watt
 Gaussian Beam Profile Extraction
-
 load image files and read camera position data from designated
 folder to produce gaussian fit in x and y dimensions. Fit data
 can then be plotted against the original image and / or saved
@@ -33,11 +32,12 @@ quick_show = 0
 
 # directory and folder for images
 dir = 'C:\\Users\\sk88\\Documents\\HWSYS\\Desktop'
-folder = '20220201_995_collimation'
+folder = '20220311_606_beam_after_collimator_before_telescope'
 # image laser wavelength(um)
-wavelength = 995e-3
-# chip and pixel size (um) if known (Hamamatsu 9.6 x 7.68 mm, DMK 1.411cm)
-chip_size = 1.411 * 1e4 # 9.6 * 1e3 #
+ff.wavelength = 606e-6
+# chip and pixel size (mm) if known (Hamamatsu 9.6 x 7.68 mm, DMK 7.04 x 
+# mm )
+chip_size = 7.04 # 9.6 # 
 
 ''' Set-up Image file names and processing information '''
 # loops through the images in the specified folder (they should be labelled 1, 2, 3 etc. with
@@ -79,7 +79,7 @@ if quick_show == 0:
     # remove duplicate positions
     z = z_pos.drop_duplicates()
     # reshape array to match other, convert from mm to um
-    z = np.reshape(z.to_numpy(), len(z)) * 1e3
+    z = np.reshape(z.to_numpy(), len(z))
 
     # warn user if insufficient data to continue
     if len(image_list) % 2 != 0:
@@ -98,7 +98,7 @@ fit_err = np.empty([array_len, 2, 3])
 
 # check input image type - fitting only works for grayscale image
 flag = 0
-if not Image.open(path + image_list[0]).mode == 'L':
+if not Image.open(path + image_list[0]).mode in ('I;16', 'L'):
     flag = 1
 
 # read image and subtract background - store in new arrays
@@ -124,6 +124,8 @@ for index, image in enumerate(image_list):
             bkd = np.float64(np.transpose(np.asarray(Image.open(path + image_list[2 * index + 1]))))
             # arrays of data, gaussian params, fit and error
             data[index, :, :] = np.absolute(img - bkd)
+            # scale data to maximum 255
+            data[index, :, :] *= 255/data[index, :, :].max()
             fit_data[index, :, :], fit_err[index, :, :] = ff.fitgauss(data[index, :, :])
 
 # convert data to um & remove negatives
@@ -132,8 +134,8 @@ scale_err = np.abs(fit_err) * pix_size
 
 # calcualate percent error
 FWHM_err = np.array(scale_err[:, :, 2] / scale_data[:, :, 2])
-# calculate FWHM & 1/e^2 (um)
-FWHM = 2 * np.sqrt(2 * np.log(2)) * scale_data[:, :, 2]
+# calculate FWHM & 1/e^2 (mm)
+FWHM = 2 * np.sqrt(2 * scale_data[:, :, 2] ** 2 * np.log(2)) 
 FWHM_x = np.reshape(FWHM[:,0], (len(FWHM),1))
 FWHM_xerr = np.reshape(FWHM_err[:, 0] * np.ravel(FWHM_x), (len(FWHM),1))
 FWHM_y = np.reshape(FWHM[:,1], (len(FWHM),1))
@@ -157,19 +159,19 @@ if quick_show == 0:
     e2yw = np.sqrt(2/np.log(2)) * yw[0]
 
     # calculate rayleigh range (um)
-    zr_x = (np.pi * np.power(xw[0], 2)) / wavelength
-    zr_y = (np.pi * np.power(yw[0], 2)) / wavelength
+    zr_x = (np.pi * np.power(xw[0], 2)) / ff.wavelength
+    zr_y = (np.pi * np.power(yw[0], 2)) / ff.wavelength
     # calculate beam divergence (deg)
-    theta_x = (wavelength / (np.pi * xw[0])) * 180/np.pi
-    theta_y = (wavelength / (np.pi * yw[0])) * 180/np.pi
+    theta_x = (ff.wavelength / (np.pi * xw[0])) * 180/np.pi
+    theta_y = (ff.wavelength / (np.pi * yw[0])) * 180/np.pi
 
     # print fit to the command line
-    print('x FWHM waist = ' + '%.2f ' % xw[0] + 'p/m ' + '%.2f um' % xw_err[0] + ' located at ' + '%.2f' % (xw[1] / 1e3)+ ' p/m ' + '%.2f mm' % (xw_err[1] / 1e3))
-    print('y FWHM waist = ' + '%.2f ' % yw[0] + 'p/m ' + '%.2f um' % yw_err[0] + ' located at ' + '%.2f' % (yw[1] / 1e3)+ ' p/m ' + '%.2f mm' % (yw_err[1] / 1e3))
-    print('x rayleigh range = ' + '%.2f mm ' % (zr_x / 1e3) + 'with divergence angle = ' + '%.2f deg' % (theta_x * (180 / np.pi)))
-    print('y rayleigh range = ' + '%.2f mm ' % (zr_y / 1e3) + 'with divergence angle = ' + '%.2f deg' % (theta_y * (180 / np.pi)))
-    print('x 1/e^2 waist = ' + '%.2f ' % e2xw + 'p/m ' + '%.2f um' % xw_err[0])
-    print('y 1/e^2 waist = ' + '%.2f ' % e2yw + 'p/m ' + '%.2f um' % yw_err[0])
+    print('x FWHM waist = ' + '%.2f ' % xw[0] + 'p/m ' + '%.2f mm' % xw_err[0] + ' located at ' + '%.2f' % (xw[1])+ ' p/m ' + '%.2f mm' % (xw_err[1]))
+    print('y FWHM waist = ' + '%.2f ' % yw[0] + 'p/m ' + '%.2f mm' % yw_err[0] + ' located at ' + '%.2f' % (yw[1])+ ' p/m ' + '%.2f mm' % (yw_err[1]))
+    print('x rayleigh range = ' + '%.2f mm ' % (zr_x) + 'with divergence angle = ' + '%.2f deg' % (theta_x * (180 / np.pi)))
+    print('y rayleigh range = ' + '%.2f mm ' % (zr_y) + 'with divergence angle = ' + '%.2f deg' % (theta_y * (180 / np.pi)))
+    print('x 1/e^2 waist = ' + '%.2f ' % e2xw + 'p/m ' + '%.2f mm' % xw_err[0])
+    print('y 1/e^2 waist = ' + '%.2f ' % e2yw + 'p/m ' + '%.2f mm' % yw_err[0])
 
     # append new data to original and write to file
     img_idx = (np.arange(1, len(image_list), 2)).reshape(len(FWHM),1)
@@ -182,17 +184,19 @@ if quick_show == 0:
 
     # plot beam diameter and waist fit
     fig_1, ax_1 = mp.subplots(nrows=2, ncols=1, sharex='all', sharey='all', constrained_layout=True)
-    ax_1[0].errorbar(z/1000, over_e2x * 1e-3 , yerr = np.ravel(e2x_err) * 1e-3, label='1/e^2 Diameter in x', markersize=5, color='red', fmt='x')
-    ax_1[1].errorbar(z/1000, over_e2y * 1e-3, yerr = np.ravel(e2y_err) * 1e-3, label='1/e^2 Diameter in y', markersize=5, color='blue', fmt='x')
-    ax_1[0].errorbar(z/1000, FWHM_x * 1e-3, yerr = np.ravel(FWHM_xerr) * 1e-3, label='FWHM Diameter in y', markersize=5, color='green', fmt='x')
-    ax_1[0].plot(z_plot/1000, ff.hyperbolic(z_plot, xw[0], xw[1]) * 1e-3, linestyle='--', label='FWHM x Fit', color='green')
-    ax_1[1].errorbar(z/1000, FWHM_y * 1e-3, yerr = np.ravel(FWHM_yerr) * 1e-3, label='FWHM Diameter in y', markersize=5, color='orange', fmt='x')
-    ax_1[1].plot(z_plot/1000, ff.hyperbolic(z_plot, yw[0], yw[1]) * 1e-3, linestyle='--', label='FWHM y Fit', color='orange')
+    ax_1[0].errorbar(z, over_e2x, yerr = np.ravel(e2x_err), label='1/e^2 Diameter in x', markersize=5, color='red', fmt='x')
+    ax_1[0].plot(z_plot, ff.hyperbolic(z_plot, e2xw, xw[1]), linestyle='--', label='1/e^2 x Fit', color='red')
+    ax_1[1].errorbar(z, over_e2y, yerr = np.ravel(e2y_err), label='1/e^2 Diameter in y', markersize=5, color='blue', fmt='x')
+    ax_1[1].plot(z_plot, ff.hyperbolic(z_plot, e2yw, yw[1]), linestyle='--', label='1/e^2 y Fit', color='blue')
+    ax_1[0].errorbar(z, FWHM_x, yerr = np.ravel(FWHM_xerr), label='FWHM Diameter in y', markersize=5, color='green', fmt='x')
+    ax_1[0].plot(z_plot, ff.hyperbolic(z_plot, xw[0], xw[1]), linestyle='--', label='FWHM x Fit', color='green')
+    ax_1[1].errorbar(z, FWHM_y, yerr = np.ravel(FWHM_yerr), label='FWHM Diameter in y', markersize=5, color='orange', fmt='x')
+    ax_1[1].plot(z_plot, ff.hyperbolic(z_plot, yw[0], yw[1]), linestyle='--', label='FWHM y Fit', color='orange')
 
     # format plots
     fig_1.suptitle('Beam Waist Fit to Data')
     for ax in ax_1:
-        ax.set(xlabel='Change in Camera Position (mm)', ylabel='1/e^2 Width (mm)')
+        ax.set(xlabel='Change in Camera Position (mm)', ylabel='Beam Diameter (mm)')
         ax.legend(loc='best', fontsize=8)
         ax.grid(True)
 
