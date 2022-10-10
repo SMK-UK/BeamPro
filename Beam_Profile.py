@@ -271,7 +271,7 @@ for index in range(array_len):
     ax_fity.legend(loc='best', fontsize=8)
 
     if plot_save == 1:
-        fig_2.savefig(fname=path + folder + '_' + str(img_idx[index]) + 'fit.pdf', dpi='figure', format='pdf')
+        fig_2.savefig(fname=path + folder + '_' + str(img_idx[index]) + 'fit.jpg', dpi='figure', format='jpg' bbox_inches='tight')
 
 if plot_show == 1:
         mp.show()
