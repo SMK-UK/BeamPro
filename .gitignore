@@ -1,2 +1,4 @@
 .bp_venv
+__pychache__
 test.py
+Beam_Profile.ipynb

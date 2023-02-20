@@ -2,6 +2,7 @@
 # Fit functions for the Beam_Profile script
 
 import numpy as np
+from numpy import pi
 from scipy.optimize import curve_fit
 
 wavelength = 1550e-6
@@ -48,8 +49,28 @@ def hyperbolic(z, waist, z_0):
 
     1D array of intensity values for the given positional arguments in z
     """
-    return waist * np.sqrt(1 + ((((z - z_0) * wavelength)/(np.pi * waist ** 2)) ** 2))
+    return waist * np.sqrt(1 + ((((z[:] - z_0) * wavelength)/(np.pi * waist ** 2)) ** 2))
 
+def sincsquare(x, a, x_0, sigma): 
+    """
+    Generate sinc^2 function for given amplitude and x positions
+
+    Parameters
+    ----------
+
+    a : Single Value
+        Peak y-value for the function
+    x : 1D array 
+        Positional arguments for sinc 
+    x_0 : Single Value
+        Position of maximum value
+
+    Returns
+    -------
+
+    1D array of values for the given positional arguments in x
+    """
+    return a * (np.sin((x[:]-x_0)*sigma) / ((x[:]-x_0)*sigma))**2
 
 # fit a gaussian to data by calculating its 'moments' (mean, variance, width, height)
 def moments(data):
@@ -173,5 +194,38 @@ def fithyp(z, beam_d, params=None, meth=None, lims=(-np.inf, np.inf)):
         Uncertainty in fitted variables
     """
     fit, success = curve_fit(hyperbolic, z, beam_d, p0=params, method=meth, bounds=lims)
+    fit_err = np.sqrt(np.diag(success))
+    return fit, fit_err
+
+def fitsincsquare(x, y, params=None, meth=None, lims=(-np.inf, np.inf)):
+    """
+    Returns a series of values that fit to a sinc(x) function
+
+    Parameters
+    ----------
+
+    x : 1D Array
+        Position data corresponding to amplitude in y
+    y : 1D Array
+        Array of amplitude values according to positions in x
+    params : 1D Array
+        Guess values for sinc function; x_0, amplitude
+    meth : Single string {'lm', 'tf', 'dogbox'}, optional
+        Method to use for optimisation. See 
+        scipy.optimize.curve_fit for details
+    bounds : 2-tuple of array_like, optional
+        Lower and upper bounds on parameters. Defaults to 
+        no bounds. 
+        See scipy.optimize.curve_fit for details
+
+    Returns
+    -------
+
+    fit_data : 1D Array
+        Fitted variables: height, sigma, mean
+    fit_err : 1D Array
+        Uncertainty in fitted variables
+    """
+    fit, success = curve_fit(sincsquare, x, y, p0=params, method=meth, bounds=lims)
     fit_err = np.sqrt(np.diag(success))
     return fit, fit_err

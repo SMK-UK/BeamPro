@@ -22,18 +22,18 @@ import fit_funcs as ff
 import sys
 
 # to save data / plots and to show plots set flag = 1
-excel_save = 1
-plot_show = 0
-plot_save = 0
+excel_save = False
+plot_show = True
+plot_save = False
 
 # quick waist calculation - no waist fit / find
-quick_show = 0
+quick_show = False
 
 ''' Folder to draw files from and save data to'''
 
 # directory and folder for images
-dir = 'C:\\Users\\sk88\\Dropbox (Heriot-Watt University Team)\\RES_EPS_Quantum_Photonics_Lab\\Experiments\\Current Experiments\\Broadband telecom quantum memories\\FP Cavity\\20220726_re_alignment_150mm'
-folder = '339mm'
+dir = 'C:\\Users\\sk88\\Dropbox (Heriot-Watt University Team)\\RES_EPS_Quantum_Photonics_Lab\\Experiments\\Current Experiments\\Broadband telecom quantum memories\\2023_Pr_YVO_Sectroscopy\\230220_IN_collimator_vis\\White_light'
+folder = 'test1'
 # image laser wavelength(mm)
 ff.wavelength = 1550e-6
 # chip and pixel size (mm) if known (Hamamatsu 9.6 x 7.68 mm, DK 1.411cm)
@@ -67,7 +67,7 @@ imsize = img.size
 # calculate the dimensions per pixel (um)
 pix_size = chip_size / imsize[0]
 
-if quick_show == 0:
+if quick_show == False:
     xl_file = [i for i in file_list if i.endswith('.xlsx')]
     # display error if file incorrect format
     if not xl_file:
@@ -157,7 +157,7 @@ Data outputs - check flags for issues
 Outputs plot of all data along with fit
 '''
 
-if quick_show == 0:
+if quick_show == False:
 
     # parameters for fit function (guess waist / z-pos)
     fit_paramsx1 = np.amin(FWHM_x), z[np.argmin(FWHM_x)]
@@ -215,7 +215,7 @@ if quick_show == 0:
         ax.legend(loc='best', fontsize=8)
         ax.grid(True)
 
-    if plot_save == 1:
+    if plot_save == True:
         fig_1.savefig(fname=path + folder + '_' + 'beam_waist_fit.pdf', dpi='figure', format='pdf')
 
 # array for fit to data
@@ -270,17 +270,17 @@ for index in range(array_len):
     ax_fitx.legend(loc='best', fontsize=8)
     ax_fity.legend(loc='best', fontsize=8)
 
-    if plot_save == 1:
-        fig_2.savefig(fname=path + folder + '_' + str(img_idx[index]) + 'fit.jpg', dpi='figure', format='jpg' bbox_inches='tight')
+    if plot_save == True:
+        fig_2.savefig(fname=path + folder + '_' + str(img_idx[index]) + 'fit.pdf', dpi='figure', format='pdf')
 
-if plot_show == 1:
+if plot_show == True:
         mp.show()
 
 '''
 Save data to excel
 '''
 
-if excel_save == 1:
+if excel_save == True:
     # append new data to original and write to file
     img_idx = (np.arange(1, len(image_list), 2)).reshape(len(FWHM),1)
     data_out = np.concatenate((img_idx, FWHM_x, over_e2x, FWHM_y, over_e2y), axis=1)
