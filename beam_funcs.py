@@ -5,8 +5,9 @@ import os
 import pandas as pd
 
 def dir_interogate(path: str, extensions: tuple[str] or list[str], 
-                   exceptions: tuple[str] or list[str] =None, folders: tuple[str]=None):
-    """
+                   exceptions: tuple[str] or list[str] =None,
+                   folders: tuple[str]=None):
+    """"
     Interogate directory and extract all folders and files with 
     the specified extensions
 
@@ -22,7 +23,6 @@ def dir_interogate(path: str, extensions: tuple[str] or list[str],
 
     folder_list : list of folder names
     file_list : list of file names
-
     """
     save_files = False
     folder_list = []
@@ -57,15 +57,29 @@ def dir_interogate(path: str, extensions: tuple[str] or list[str],
             holder = 1
 
     if len(file_list) == 1:
-        file_list = [file_name for sublist in file_list for file_name in sublist]
+        file_list = [file_name for sublist in file_list for file_name 
+                    in sublist]
 
     return folder_list, file_list
 
 def image_read(path: str, mode: str =None, convert=0):
+    """
+    Open a given excel / csv file and generate list
 
+    Parameters
+    ----------
+    path : file path
+    mode : image type
+    convert : Bool to convert image to type 'mode' 
+    
+    Returns
+    -------
+    image : PIL object of the image
+    """
     image = Image.open(path)
     if convert == 1:
-        image = image.convert(mode=mode, matrix =None, dither=None, palette=0, colors=256)
+        image = image.convert(mode=mode, matrix =None, dither=None,
+                              palette=0, colors=256)
 
     return image
 
@@ -79,13 +93,13 @@ def open_excel(path: str, seperators: str=','):
     
     Returns
     -------
-    excel_data : pandas data frame 
-    
+    excel_data : list of the extracted data 
     """
     temp_df = pd.read_csv(path, sep=seperators)
     excel_data = [temp_df[x].values.tolist() for x in temp_df]
 
     if len(excel_data) == 1:
-        excel_data = [value for sublist in excel_data for value in sublist]
+        excel_data = [value for sublist in excel_data for value in
+                      sublist]
 
     return excel_data

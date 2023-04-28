@@ -2,6 +2,7 @@
 Sean Keenan, PhD Heriot-Watt University, Edinburgh
 Quantum memories group - QPL Heriot-Watt
 Gaussian Beam Profile Extraction
+2023
 '''
 
 # import relevant modules
