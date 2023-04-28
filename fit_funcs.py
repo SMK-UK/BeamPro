@@ -1,8 +1,6 @@
-
 # Fit functions for the Beam_Profile script
 
 import numpy as np
-from numpy import pi
 from scipy.optimize import curve_fit
 
 wavelength = 1550e-6
@@ -72,7 +70,6 @@ def sincsquare(x, a, x_0, sigma):
     """
     return a * (np.sin((x[:]-x_0)*sigma) / ((x[:]-x_0)*sigma))**2
 
-# fit a gaussian to data by calculating its 'moments' (mean, variance, width, height)
 def moments(data):
     """
     Calculates parameters of a gaussian function by calculating
@@ -97,11 +94,11 @@ def moments(data):
     index_x : Single value
         Calculates index of peak value along one-dimension of the matrix
     sigma_x : Single value
-        Calculates the width (FWHM) along the first array
+        Calculates the width along the first array
     index_y : Single value
         Calculates index of peak value along the other dimension of the matrix
     sigma_y : Single value
-        Calculates the width (FWHM) along the second array
+        Calculates the width along the second array
     """
 
     # find height and centre of gaussian
