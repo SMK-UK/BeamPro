@@ -4,10 +4,10 @@ import numpy as np
 import os
 import pandas as pd
 
-def dir_interogate(path: str, extensions: tuple[str] or list[str], 
-                   exceptions: tuple[str] or list[str] =None,
-                   folders: tuple[str]=None):
-    """"
+def dir_interogate(path: str, extensions: tuple[str,...] = (), 
+                   exceptions: tuple[str,...] = (), 
+                   folders: tuple[str,...] = ()):
+    """
     Interogate directory and extract all folders and files with 
     the specified extensions
 
@@ -17,49 +17,49 @@ def dir_interogate(path: str, extensions: tuple[str] or list[str],
     path : string - main folder / directory to interrogate
     exts : tuple / list - file extensions to check for in directory
     exceptions : tuple / list - file extensions / strings to exclude
+    folders : list - selected folders to extract from
 
     Returns
     -------
 
     folder_list : list of folder names
     file_list : list of file names
+
     """
-    save_files = False
     folder_list = []
     file_list = []
-    # holder removes parent folder from lists
-    holder = 0
-    # walk through directory and extract all relevant files
     for root, dirs, files in natsorted(os.walk(path)):
-        if holder == 1:
-            if folders == None:
-                # populate folder list
-                folder_list.append(root)
-                save_files = True
-            elif(root.endswith(folders)):
-                # populate selected folder list
-                folder_list.append(root)
-                save_files = True
-            temp = []
-            if save_files == True:
-                for file in natsorted(files):
-                    # check for file extension
-                    if(file.endswith(extensions)):
-                        if exceptions == None:
-                            temp.append(file)
-                        elif any([x in file for x in exceptions]):
-                            continue
-                        else:
-                            temp.append(file)
-                file_list.append(temp)
-                save_files = False
-        else:
-            holder = 1
+
+        if dirs:
+            dirs = natsorted(dirs)
+            if not folders:
+                folder_list = dirs
+            else:
+                folder_list = [folder for folder in dirs 
+                               if folder in folders]
+            if exceptions:
+                folder_list = [folder for folder in folder_list
+                               if not any([x in folder for x in exceptions])]
+
+        if not dirs:
+            temp_files = []
+            if not folders:
+                temp_files = files
+            elif any([x in os.path.split(root) for x in folders]):
+                temp_files = files
+            if exceptions:
+                temp_files = [file for file in temp_files
+                              if not any([x in file for x in exceptions])]
+            if extensions:
+                temp_files = [file for file in temp_files
+                              if file.endswith(extensions)]
+            if temp_files:
+                file_list.append(natsorted(temp_files))
 
     if len(file_list) == 1:
-        file_list = [file_name for sublist in file_list for file_name 
-                    in sublist]
-
+        file_list = [file_name for sublist in file_list
+                     for file_name in sublist]
+    
     return folder_list, file_list
 
 def image_read(path: str, mode: str =None, convert=0):
