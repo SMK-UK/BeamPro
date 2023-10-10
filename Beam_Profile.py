@@ -12,40 +12,33 @@ import matplotlib.pyplot as mp
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 import os
-from PIL import Image
 import sys
+mp.style.use('signature.mplstyle')
 
-# choose to save plots
-plot_save = False
 # directory and folder for images
-folder = r'23'
-dir = r'C:\Users\sk88\Desktop\995 AOM collimation'
+folder = ['75mm focus']
+root = r"C:\Users\sk88\Desktop\995 collimation"
+dir = os.path.join(root, folder[0])
 # image laser wavelength(mm)
-ff.wavelength = 1550e-6
+ff.wavelength = 995e-6
 # chip and pixel size (mm) if known (Hamamatsu 9.6 x 7.68 mm, DK 1.411cm)
-camera = 'Hamamatsu'
+chip_size = [9.6, 7.68]
+# material refractive index
+n = 1.0003
 # see curve fit docs for methods
 method = 'dogbox'
 # tolerance in waist and waist position for fitting
 multiplier = 0.5 / 100
 # to save data / plots and to show plots
 excel_save = False
-plot_show = False
+plot_show = True
 plot_save = False
-# quick waist calculation - no waist fit / find
-quick_show = False
 # params for directory interogate
 image_exts = ('.tif', '.bmp')
-ext = image_exts +  ('.csv', '.xlsx')
-if camera == 'Hamamatsu':
-    chip_size_x = 9.6
-    chip_size_y = 7.68
-else:
-    chip_size_x = 14.11
-    chip_size_y = 14.11
+ext = image_exts + ('.csv',)
 
 # extract data from folder
-folders, files = bf.dir_interogate(path=dir, extensions=ext, folders=folder)
+folders, files = bf.dir_interogate(path=root, extensions=ext, choose_folders=folder)
 image_files = [i for i in files if i.endswith(image_exts)]
 z_file = [ i for i in files if i.endswith('.csv')]
 # display error if file incorrect format
@@ -56,44 +49,35 @@ if len(image_files) % 2 != 0:
     sys.exit('Number of image files must be even')
 # determine length of arrays needed
 array_len = int(len(image_files)/2)
-distances = bf.open_excel(os.path.join(folders[0], z_file[0]))
+distances = bf.open_excel(os.path.join(dir, z_file[0]))
 if len(distances) != array_len:
     sys.exit('Number of images and z-distance mismatch')
 
-    # determine imag size and calulate pixel dimension (mm)
-base_image = Image.open(os.path.join(folders[0], image_files[0]))
-im_size = base_image.size
-pix_size_x = chip_size_x/ im_size[0]
-pix_size_y = chip_size_y/ im_size[1]
-# create empty arrays for new data
-data = np.empty([array_len, im_size[0], im_size[1]])
+# normalise images and fit
+data = []
 fit_data = np.empty([array_len, 2, 3])
 fit_err = np.empty([array_len, 2, 3])
-# check image type to ensure acurate data processing
-im_type = 0
-if not base_image.mode in ('I;16', 'L'):
-    im_type = 1
-# load images and convert to arrays
+
 for index, image_file in enumerate(image_files):
     if index < array_len:
-        if im_type == 1:
-            beam_image = np.float64(np.transpose(np.asarray(bf.image_read(path=os.path.join(folders[0], image_files[2 * index]), mode='L', convert=1))))
-            beam_bkd = np.float64(np.transpose(np.asarray(bf.image_read(path=os.path.join(folders[0], image_file[2 * index+ 1]), mode='L', convert=1))))
-        else:
-            beam_image = np.float64(np.transpose(np.asarray(bf.image_read(path=os.path.join(folders[0], image_files[2 * index]), convert=0))))
-            beam_bkd = np.float64(np.transpose(np.asarray(bf.image_read(path=os.path.join(folders[0], image_files[2 * index + 1]), convert=0))))
-        data[index, :, :] = np.absolute(beam_image - beam_bkd)
-        data[index, :, :] *= 255/data[index, :, :].max()
-        # calculate metadata for gaussian beams
-        fit_data[index, :, :], fit_err[index, :, :] = ff.fitgauss(data[index, :, :])
 
-# convert data to mm & remove negatives
-scale_data = np.abs(fit_data) * pix_size_x
-scale_err = np.abs(fit_err) * pix_size_x
-# calcualate percent error
-FWHM_err = np.array(scale_err[:, :, 2] / scale_data[:, :, 2])
+        beam_image = os.path.join(dir, image_files[2 * index])
+        beam_bkd = os.path.join(dir, image_files[2 * index + 1])
+        data.append(bf.norm_image(beam_image, beam_bkd))
+        fit_data[index, :, :], fit_err[index, :, :] = ff.fitgauss(data[index])
+
+# scale the data to mm
+pix_size = bf.get_pix_size(beam_image, chip_size)
+scale_data = np.abs(fit_data) * pix_size[0]
+scale_err = np.abs(fit_err) * pix_size[0]
+fit_data[:, 0, 1:] = np.abs(fit_data[:, 0, 1:]) * pix_size[0]
+fit_err[:, 0, 1:] = np.abs(fit_err[:, 0, 1:]) * pix_size[0]
+fit_data[:, 1, 1:] = np.abs(fit_data[:, 1, 1:]) * pix_size[1]
+fit_err[:, 1, 1:] = np.abs(fit_err[:, 1, 1:]) * pix_size[1]
+
 # calculate FWHM & 1/e^2 (um)
-FWHM = 2 * np.sqrt(2 * np.log(2)) * scale_data[:, :, 2]
+FWHM = 2 * np.sqrt(2 * np.log(2)) *fit_data[:, :, 2]
+FWHM_err = np.array(scale_err[:, :, 2] / scale_data[:, :, 2])
 FWHM_xy = [np.reshape(FWHM[:, 0], (len(FWHM),1)), np.reshape(FWHM[:, 1], (len(FWHM),1))]
 FWHM_err = [np.reshape(FWHM_err[:, 0] * np.ravel(FWHM_xy[0]), (len(FWHM),1)), np.reshape(FWHM_err[:, 1] * np.ravel(FWHM_xy[1]),  (len(FWHM),1))]
 e2_xy = [FWHM_xy[0] / np.sqrt(2*np.log(2)), FWHM_xy[1] / np.sqrt(2*np.log(2))]
@@ -105,8 +89,8 @@ e2x_lims = ([np.amin(e2_xy[0]) * 1 - multiplier, distances[np.argmin(e2_xy[0])] 
 e2x, e2x_err = ff.fithyp(distances, np.ravel(e2_xy[0]), e2_params[0], meth=method, lims=e2x_lims)
 e2y, e2y_err = ff.fithyp(distances, np.ravel(e2_xy[1]), e2_params[1], meth=method)
 # calculate rayleigh range and divergence angle
-zr = [(np.pi * 1.0003 * e2x[0] ** 2)/ff.wavelength, (np.pi * 1.0003 * e2x[0] ** 2)/ff.wavelength]
-theta = [(ff.wavelength / (np.pi *1.0003 * e2y[0])) * (180/np.pi), (ff.wavelength / (np.pi * 1.0003 * e2y[0])) * (180/np.pi)]
+zr = [(np.pi * n * e2x[0] ** 2)/ff.wavelength, (np.pi * n * e2x[0] ** 2)/ff.wavelength]
+theta = [(ff.wavelength / (np.pi * n * e2y[0])) * (180/np.pi), (ff.wavelength / (np.pi * n * e2y[0])) * (180/np.pi)]
 # print out waist values and rayleigh range
 print('x 1/e^2 waist = ' + '%.2f ' % e2x[0] + 'p/m ' + '%.2f mm' % e2x_err[0] + ' located at ' + '%.2f' % (e2x[1])+ ' p/m ' + '%.2f mm' % (e2x_err[1]))
 print('y 1/e^2 waist = ' + '%.2f ' % e2y[0] + 'p/m ' + '%.2f mm' % e2y_err[0] + ' located at ' + '%.2f' % (e2y[1])+ ' p/m ' + '%.2f mm' % (e2y_err[1]))
@@ -132,21 +116,20 @@ ax_1[1].plot(zy_plot, ff.hyperbolic(zy_plot, e2y[0], e2y[1]), linestyle='--', la
 fig_1.suptitle('Beam Waist Fit to Data')
 for ax in ax_1:
     ax.set(xlabel='Change in Camera Position (mm)', ylabel='Beam Diameter (mm)')
-    ax.legend(loc='best', fontsize=8)
-    ax.grid(True)
+    ax.legend(loc='best')
 
-# array for fit to data
-x = np.arange(1, im_size[0] + 1, 1)
-y = np.arange(1, im_size[1] + 1, 1)
-# labels for plotting beam images
+    x = np.linspace(0, chip_size[0], 320)
+y = np.linspace(0, chip_size[1], 256)
+
 img_idx = (np.arange(1, len(image_files), 2)).reshape(len(FWHM),1)
-# plot gaussian fit to data  
-for index in range(array_len):
-    
+
+for index, data_array in enumerate(data):
+
     # define figure and axes
     fig_2, ax_2 = mp.subplots(figsize=(5, 5))
-    # main figure original image
-    ax_2.imshow(np.transpose(data[index,: , :]), extent=[0, pix_size_x * im_size[0], pix_size_y * im_size[1], 0])
+    # plot image
+    ax_2.imshow(np.transpose(data_array), extent=[0, chip_size[0], chip_size[1], 0])
+
     # add top and left subplots
     divider = make_axes_locatable(ax_2)
     ax_fitx = divider.append_axes("top", 1, pad=0.1, sharex=ax_2)
@@ -154,43 +137,36 @@ for index in range(array_len):
     # remove corresponding axes labels
     ax_fitx.xaxis.set_tick_params(labelbottom=False)
     ax_fity.yaxis.set_tick_params(labelleft=False)
-    # plot data
-    ax_fitx.plot(x * pix_size_x, ff.gaussian(x, *fit_data[index, 0, :]), label='Fit in X')
-    ax_fitx.plot(x * pix_size_x, data[index, :, round(fit_data[index, 1, 1])], label='X Data')
-    ax_fity.plot(ff.gaussian(y, *fit_data[index, 1, :]), y * pix_size_y, label='Fit in Y')
-    ax_fity.plot(data[index, round(fit_data[index, 0, 1]), :], y * pix_size_y, label='Y Data')
+    # Gaussian fit in x
+    ax_fitx.plot(x, ff.gaussian(x, *fit_data[index, 0, :]), label='Fit in X')
+    ax_fitx.plot(x, data_array[:, round(fit_data[index, 1, 1]/pix_size[0])], label='X Data')
+    # Gaussian fit in y
+    ax_fity.plot(ff.gaussian(y, *fit_data[index, 1, :]), y, label='Fit in Y')
+    ax_fity.plot(data_array[round(fit_data[index, 0, 1]/pix_size[1]), :], y, label='Y Data')
     # axis label formatting
     ticks = np.linspace(start=0, stop=np.max(data[index]), num=4)
-    ax_fitx.set_yticks(ticks)
-    ax_fity.set_xticks(ticks)
-    ax_2.set_xticks(np.arange(0, im_size[0] * pix_size_x, 0.2))
-    ax_2.set_yticks(np.arange(0, im_size[1] * pix_size_y, 0.2))
-    # set limits
-    llim = round(fit_data[index, 0, 1] * pix_size_x, ndigits=2) - 4 * round(fit_data[index, 0, 2] * pix_size_x, ndigits=2)
-    rlim = round(fit_data[index, 0, 1] * pix_size_x, ndigits=2) + 4 * round(fit_data[index, 0, 2] * pix_size_x, ndigits=2)
-    tlim = round(fit_data[index, 1, 1] * pix_size_y, ndigits=2) - 4 * round(fit_data[index, 1, 2] * pix_size_y, ndigits=2)
-    blim = round(fit_data[index, 1, 1] * pix_size_y, ndigits=2) + 4 * round(fit_data[index, 1, 2] * pix_size_y, ndigits=2)
+    ax_fity.set_yticks(ticks)
+    ax_2.set_xticks(np.arange(0, chip_size[0], round(e2x[0] * 2, ndigits=2)))
+    ax_2.set_yticks(np.arange(0, chip_size[1], round(e2y[0] * 2, ndigits=2)))
+
+    llim = round(fit_data[index, 0, 1], ndigits=2) - 4 * round(fit_data[index, 0, 2], ndigits=2)
+    rlim = round(fit_data[index, 0, 1], ndigits=2) + 4 * round(fit_data[index, 0, 2], ndigits=2)
+    tlim = round(fit_data[index, 1, 1], ndigits=2) - 4 * round(fit_data[index, 1, 2], ndigits=2)
+    blim = round(fit_data[index, 1, 1], ndigits=2) + 4 * round(fit_data[index, 1, 2], ndigits=2)
     ax_2.set_xlim(left=llim, right=rlim)
     ax_2.set_ylim(top=tlim, bottom=blim)
-    # add grid lines
-    ax_fitx.grid(True)
-    ax_fity.grid(True)
-    ax_2.grid(True, color='silver', linewidth=0.5)
+
     # format labels
     ax_2.set(xlabel='Chip size (mm)', ylabel='Chip size (mm)')
     ax_fitx.set(ylabel='Intensity (AU)')
     ax_fity.set(xlabel='Intensity (AU)')
-    if quick_show == 0:
-        fig_2.suptitle('Image ' + str(img_idx[index]) + ' at ' + str((distances[index])) + ' mm')
-    else:
-        fig_2.suptitle('Image ' + str(img_idx[index]) + ' waist ' + str((e2_xy[0][index])) + ' mm')
-
-    ax_fitx.legend(loc='best', fontsize=8)
-    ax_fity.legend(loc='best', fontsize=8)
+    ax_fitx.legend(loc='best')
+    ax_fity.legend(loc='best')
+    fig_2.suptitle('Image ' + str(img_idx[index]) + ' waist ' + str((np.round(e2_xy[0][index], decimals=2))) + ' mm')
 
     if plot_save == True:
-        fig_1.savefig(fname=dir + folder + '_' + 'beam_waist_fit', dpi=80, format='png')
-        fig_2.savefig(fname=dir + folder + '_' + str(img_idx[index]) + 'fit.pdf', dpi='figure', format='pdf')
+        fig_1.savefig(fname=dir + '_' + 'beam_waist_fit', dpi=80, format='png')
+        fig_2.savefig(fname=dir + '_' + str(img_idx[index]) + 'fit.pdf', dpi=80, format='png')
 
 if plot_show == True:
     mp.show()
