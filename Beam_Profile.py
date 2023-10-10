@@ -18,8 +18,8 @@ import sys
 # choose to save plots
 plot_save = False
 # directory and folder for images
-folder = r'folder containing .tif or .bmp of beam and .csv of'
-dir = r'directory of image fles'
+folder = r'23'
+dir = r'C:\Users\sk88\Desktop\995 AOM collimation'
 # image laser wavelength(mm)
 ff.wavelength = 1550e-6
 # chip and pixel size (mm) if known (Hamamatsu 9.6 x 7.68 mm, DK 1.411cm)

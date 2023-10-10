@@ -1,0 +1,46 @@
+### FIGURE
+text.color: .15
+
+figure.figsize : 6, 6
+figure.facecolor: white
+figure.dpi: 80
+figure.titlesize: 12
+figure.titleweight: bold
+
+### LINES
+lines.linewidth: 1
+lines.solid_capstyle: round
+
+### PATCHES
+patch.facecolor: 0072B2
+
+### LEGEND
+legend.fontsize: 10
+legend.frameon: False
+legend.numpoints: 1
+legend.scatterpoints: 1
+
+### TICKS
+xtick.color: .15
+ytick.color: .15
+xtick.direction: out
+ytick.direction: out
+
+### FONTS
+font.family: sans-serif
+font.sans-serif: Arial, Liberation Sans, DejaVu Sans, Bitstream Vera Sans, sans-serif
+font.size: 10
+
+### AXES
+axes.grid: True
+grid.linestyle: -
+axes.facecolor: whitesmoke
+axes.linewidth: 1.0
+axes.titlesize: 10
+axes.titleweight: bold
+axes.labelsize: 10
+axes.labelweight: bold
+axes.spines.top: True
+axes.spines.right: True
+axes.labelcolor: .15
+axes.axisbelow: True
