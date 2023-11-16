@@ -24,7 +24,7 @@ def gaussian(x: list[int], height: int, centre: int, sigma: int):
     """
     return height * np.exp(-(np.power(x - centre, 2) / (2 * sigma ** 2)))
 
-def hyperbolic(z: list[int], waist: int, z_0: int): 
+def hyperbolic(z: list[int], waist: float, z_0: int, n: float = 1.003): 
     """
     Generate hyperbolic function for given beam waist, z positions
     and wavelength
@@ -35,6 +35,7 @@ def hyperbolic(z: list[int], waist: int, z_0: int):
     z : Positional arguments for hyperbolic 
     waist : Minimum y-value for the function
     z_0 : Position of waist
+    n : refractive index of medium
 
     Returns
     -------
@@ -42,8 +43,7 @@ def hyperbolic(z: list[int], waist: int, z_0: int):
     1D array of intensity values for the given positional arguments
     in z
     """
-    return waist * np.sqrt(1 + ((((z[:] - z_0) * wavelength)
-                                /(np.pi * waist ** 2)) ** 2))
+    return waist * np.sqrt(1 + ((((z[:] - z_0) * wavelength)/(np.pi * n * waist ** 2)) ** 2))
 
 def moments(data: np.ndarray):
     """
