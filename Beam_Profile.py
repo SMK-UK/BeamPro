@@ -22,15 +22,13 @@ import sys
 mp.style.use('signature.mplstyle')
 
 # directory and folder for images
-folder = ['20231116_606_AOM_beam_collimation']
-root = r"C:\Users\sk88\Dropbox (Heriot-Watt University Team)\RES_EPS_Quantum_Photonics_Lab\Experiments\Current Experiments\Visible Quantum Memory\Beam_Collimation\606"
+folder = ['10']
+root = r"C:\Users\sk88\Desktop\995 2PAC"
 dir = os.path.join(root, folder[0])
 # image laser wavelength(mm)
-ff.wavelength = 606e-6
-# chip and pixel size (mm) if known (Hamamatsu 9.6 x 7.68 mm, DK 1.411cm)
-chip_size = [9.6, 7.68]
-chip_size_x =  14.11
-chip_size_y = 14.11
+ff.wavelength = 995e-6
+# chip and pixel size (mm) if known (Hamamatsu 9.6 x 7.68 mm, DK 14.11mm)
+chip_size = [7.04, 5.28]
 # material refractive index
 n = 1.0003
 # see curve fit docs for methods
@@ -177,8 +175,8 @@ for index, data_array in enumerate(data):
         fig_2.suptitle('Image ' + str(img_idx[index]) + ' waist ' + str((e2_xy[0][index])) + ' mm')
 
     if plot_save == True:
-        fig_1.savefig(fname=dir + '_' + 'beam_waist_fit', dpi=80, format='png')
-        fig_2.savefig(fname=dir + '_' + str(img_idx[index]) + 'fit.pdf', dpi='figure', format='pdf')
+        fig_1.savefig(fname=dir + '\\' + 'beam_waist_fit.png', dpi=80, format='png')
+        fig_2.savefig(fname=dir + '\\' + str(img_idx[index]) + 'fit.pdf', dpi='figure', format='pdf')
 
 if plot_show == True:
     mp.show()
