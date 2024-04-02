@@ -63,7 +63,7 @@ def dir_interogate(path: str, extensions: tuple[str,...] = (),
 
 def get_pix_size(image_file: str, chip_dims: []):
     """
-    Open a given excel / csv file and generate list
+    Determine pixel dimensions in mm for a give image file
 
     Parameters
     ----------
@@ -81,7 +81,7 @@ def get_pix_size(image_file: str, chip_dims: []):
 
 def norm_image(image_file: str, bkd_file: str):
     """
-    Normalise an image by subtracting background noise
+    Convert an image file into a normalised array
 
     Parameters
     ----------
@@ -94,11 +94,14 @@ def norm_image(image_file: str, bkd_file: str):
     """
 
     normalised = np.empty([])
+    # determine image 'mode' and convert to correct type if neccesary
     if not image_read(image_file).mode in ('I;16', 'L'):
         beam_image = np.float64(np.transpose(np.asarray(image_read(path=image_file, mode='L', convert=1))))
-        beam_bkd = np.float64(np.transpose(np.asarray(image_read(path=bkd_file, mode='L', convert=1))))
     else:
         beam_image = np.float64(np.transpose(np.asarray(image_read(path=image_file, convert=0))))
+    if not image_read(bkd_file).mode in ('I;16', 'L'):
+        beam_bkd = np.float64(np.transpose(np.asarray(image_read(path=bkd_file, mode='L', convert=1))))
+    else:    
         beam_bkd = np.float64(np.transpose(np.asarray(image_read(path=bkd_file, convert=0))))
     
     normalised = np.absolute(beam_image - beam_bkd)
@@ -108,7 +111,7 @@ def norm_image(image_file: str, bkd_file: str):
 
 def image_read(path: str, mode: str =None, convert=0):
     """
-    Open a given excel / csv file and generate list
+    Read image file and convert to array
 
     Parameters
     ----------
