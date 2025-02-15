@@ -211,11 +211,11 @@ class BeamPlot:
         ax_top.xaxis.set_tick_params(labelbottom=False)
         ax_right.yaxis.set_tick_params(labelleft=False)
         # plot the x fit and real data
-        ax_top.plot(x, amp_x, label='Fit in X')
-        ax_top.plot(x, data_x, label=' X Data')
+        ax_top.plot(x, data_x, label=' X Data', alpha=0.75)
+        ax_top.plot(x, amp_x, linestyle ='--', label='Fit in X')
         # plot the y fit and real data
-        ax_right.plot(amp_y, y, label='Fit in Y')
-        ax_right.plot(data_y, y, label='Y Data')
+        ax_right.plot(data_y, y, label='Y Data', alpha=0.75)
+        ax_right.plot(amp_y, y, linestyle ='--', label='Fit in Y')
         # crop if required
         if crop:
             lims = self._crop(data)
@@ -226,8 +226,7 @@ class BeamPlot:
         ax_top.set(ylabel='Intensity (AU)')
         ax_right.set(xlabel='Intensity (AU)')
         # legend
-        ax_top.legend(loc='best')
-        ax_right.legend(loc='best')
+        ax_top.legend(loc='best', bbox_to_anchor=(1,1))
 
         ax.imshow(transpose(data.image), extent=[0, max(x), max(y), 0], cmap='viridis')
 
@@ -264,8 +263,8 @@ class BeamPlot:
         print('Rayleigh', zR_x)
         print('Rayleigh', zR_y)
         # Generate z-position values for the plot (extended Rayleigh range)
-        z_x = self._generate_z(1.2*zR_x, x_results[0][0])
-        z_y = self._generate_z(1.2*zR_y, y_results[0][0])
+        z_x = self._generate_z(1.2*zR_x, x_results[0][1])
+        z_y = self._generate_z(1.2*zR_y, y_results[0][1])
         # Plot the beam waist data and fits
         fig, ax = mp.subplots()
         ax.errorbar(z, w_x, yerr=x_err, color='C0', label='$\omega_{0}$ x', fmt='.')

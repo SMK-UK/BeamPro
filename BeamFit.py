@@ -331,11 +331,11 @@ class BeamFit:
         w_y = [beam.ywaist[0] for beam in beamfits]
         w = [w_x, w_y]
         i = [np.argmin(w_x), np.argmin(w_y)]
-        bounds = ([0, -np.inf], [np.inf, np.inf])
-
+    
         results = []
         for index, loc in enumerate(i):
             p0 = [w[index][loc], z[loc]]
+            bounds = ([0, -np.inf], [1.2*w[index][loc], np.inf])
             try:
                  fit, covariance = curve_fit(
                      lambda z, waist, z_0: BeamFit._hyperbolic(z, waist, z_0, wavelength, n),

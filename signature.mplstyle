@@ -1,46 +1,55 @@
 ### FIGURE
-text.color: .15
-
-figure.figsize : 6, 6
-figure.facecolor: white
-figure.dpi: 80
-figure.titlesize: 12
-figure.titleweight: bold
-
-### LINES
-lines.linewidth: 1
-lines.solid_capstyle: round
-
-### PATCHES
-patch.facecolor: 0072B2
-
-### LEGEND
-legend.fontsize: 10
-legend.frameon: False
-legend.numpoints: 1
-legend.scatterpoints: 1
-
-### TICKS
-xtick.color: .15
-ytick.color: .15
-xtick.direction: out
-ytick.direction: out
+text.color: .15                # Color of text used in figures, specified as a grayscale value (0=black, 1=white)
+figure.figsize : 6, 4          # Default size of the figure in inches (width, height)
+figure.facecolor: white        # Background color of the figure
+figure.dpi: 80                 # Dots per inch (resolution) of the figure
+figure.titlesize: 16           # Font size of the figure title
+figure.titleweight: bold       # Weight of the figure title font (e.g., normal, bold)
 
 ### FONTS
-font.family: sans-serif
+font.family: sans-serif         # Default font family used in the figure
 font.sans-serif: Arial, Liberation Sans, DejaVu Sans, Bitstream Vera Sans, sans-serif
-font.size: 10
+                               # List of sans-serif fonts to try, in priority order
+font.size: 12                  # Default font size for text elements
+
+### LATEX
+text.usetex: True              # Use LaTeX for rendering text (requires a LaTeX installation)
 
 ### AXES
-axes.grid: True
-grid.linestyle: -
-axes.facecolor: whitesmoke
-axes.linewidth: 1.0
-axes.titlesize: 10
-axes.titleweight: bold
-axes.labelsize: 10
-axes.labelweight: bold
-axes.spines.top: True
-axes.spines.right: True
-axes.labelcolor: .15
-axes.axisbelow: True
+axes.grid: True                # Display grid on the axes
+grid.linestyle: -              # Style of the grid lines (e.g., solid line `-`)
+axes.facecolor: whitesmoke     # Background color of the axes
+axes.linewidth: 1.0            # Width of the axes frame lines
+axes.titlesize: 10             # Font size of the axes title
+axes.titleweight: bold         # Weight of the axes title font
+axes.labelsize: 16             # Font size of the x and y axis labels
+axes.labelweight: bold         # Weight of the x and y axis label font
+axes.spines.top: True          # Display the top spine (border) of the axes
+axes.spines.right: True        # Display the right spine (border) of the axes
+axes.labelcolor: .15           # Color of the x and y axis labels, specified as a grayscale value
+axes.axisbelow: True           # Draw gridlines and ticks below other elements
+
+### ERRORBARS
+errorbar.capsize: 2.5          # Size of the caps on error bars
+
+### LEGEND
+legend.fontsize: 14            # Font size of the legend text
+legend.frameon: False          # Disable the legend box frame
+legend.numpoints: 1            # Number of points in a legend entry for a line
+legend.scatterpoints: 1        # Number of points in a legend entry for a scatter plot
+
+### LINES
+lines.linewidth: 2             # Default width of lines in plots
+lines.solid_capstyle: round    # Cap style for solid lines (e.g., round, butt, projecting)
+lines.markersize: 8            # Default size of markers in plots
+
+### PATCHES
+patch.facecolor: 0072B2        # Default color for patches (e.g., bars, areas) in hexadecimal format
+
+### TICKS
+xtick.color: .15               # Color of x-axis ticks, specified as a grayscale value
+ytick.color: .15               # Color of y-axis ticks, specified as a grayscale value
+xtick.direction: out           # Direction of x-axis ticks (e.g., in, out)
+ytick.direction: out           # Direction of y-axis ticks (e.g., in, out)
+xtick.labelsize: 14            # Font size of x-axis tick labels
+ytick.labelsize: 14            # Font size of y-axis tick labels
