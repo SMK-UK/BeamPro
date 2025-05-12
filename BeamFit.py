@@ -60,7 +60,8 @@ class BeamFit:
     def __init__(self,
                  image:np.ndarray,
                  zpos:float,
-                 pix:tuple
+                 pix:tuple,
+                 model:str='gaussian'
                  ) -> None:
         """
         Initializes the BeamFit class with a beam profile image and its z-position.
@@ -77,7 +78,9 @@ class BeamFit:
         self.image = image
         self.zpos = zpos
         self.pix = pix
+        self.model = model
         self.height = np.amax(self.image)
+        self.floor = np.amin(self.image)
         self.xwaist = self._get_waist('x')
         self.ywaist = self._get_waist('y')
 
@@ -90,17 +93,21 @@ class BeamFit:
         tuple : (index_x, index_y)
             Indices of the center of the beam profile.
         """
-        x_i, y_i = np.indices(self.image.shape)
-        i_tot = np.sum(self.image)
         # if no image
-        if i_tot == 0:
-            print('Image is empty - returning centre indexes')
-            return len(x_i)//2, len(y_i)//2
+        if self.image is None or self.image.sum() == 0:
+            print("Image is empty - returning centre indexes")
+            return self.image.shape[0] // 2, self.image.shape[1] // 2
+    
+        if self.model == 'gaussian':
+            x_i, y_i = np.indices(self.image.shape)
+            i_tot = np.sum(self.image)
+            
+            index_x = int(round(np.sum(x_i*self.image) / i_tot))
+            index_y = int(round(np.sum(y_i*self.image) / i_tot))
 
-        index_x = int(round(np.sum(x_i*self.image) / i_tot))
-        index_y = int(round(np.sum(y_i*self.image) / i_tot))
-
-        return index_x, index_y
+            return index_x, index_y
+        else:
+            return np.unravel_index(np.argmax(self.image), self.image.shape)
     
     def _find_vector(self) -> tuple:
         """
@@ -131,23 +138,32 @@ class BeamFit:
         
         Returns
         -------
-        float : The calculated beam width (standard deviation).
+        float : The calculated beam width (standard deviation 
+        or FWHM depending on model).
         """
-        positions = np.arange(len(vector))  # Pixel indices
-        nonzero_mask = vector > 0  # Mask to ignore dark pixels
+        if self.model == 'gaussian':
+            positions = np.arange(len(vector))  # Pixel indices
+            nonzero_mask = vector > 0  # Mask to ignore dark pixels
 
-        if not np.any(nonzero_mask):
-            return 0  # If no beam is present, return 0 width
+            if not np.any(nonzero_mask):
+                return 0  # If no beam is present, return 0 width
 
-        vector_nonzero = vector[nonzero_mask]  # Keep only nonzero intensity values
-        positions_nonzero = positions[nonzero_mask]  # Corresponding positions
+            vector_nonzero = vector[nonzero_mask]  # Keep only nonzero intensity values
+            positions_nonzero = positions[nonzero_mask]  # Corresponding positions
 
-        total_intensity = np.sum(vector_nonzero)
-        mean_position = np.sum(positions_nonzero * vector_nonzero) / total_intensity
+            total_intensity = np.sum(vector_nonzero)
+            mean_position = np.sum(positions_nonzero * vector_nonzero) / total_intensity
 
-        variance = np.sum(vector_nonzero * (positions_nonzero - mean_position) ** 2) / total_intensity
-        return np.sqrt(variance)  # Standard deviation
-    
+            variance = np.sum(vector_nonzero * (positions_nonzero - mean_position) ** 2) / total_intensity
+            return np.sqrt(variance)  # Standard deviation
+        else:
+            half_max = np.max(vector) / 2
+            indices = np.where(vector >= half_max)[0]
+            # Profile too narrow or noisy
+            if len(indices) < 2:
+                return 0.0  
+            return indices[-1] - indices[0]  # Width at half max
+
     def _extract_widths(self) -> tuple:
         """
         Extracts the widths (standard deviations) of the beam in both x and y dimensions.
@@ -166,21 +182,22 @@ class BeamFit:
         
         Returns
         -------
-        tuple : (height, index_x, sigma_x, index_y, sigma_y)
-            The height, center indices, and widths (sigma) of the beam profile.
+        tuple : (height, index_x, sigma_x, index_y, sigma_y, floor)
+            The height, center indices, widths (sigma) of the beam profile and height offset.
         """
         # handle case where there are multiple 'max' values
         index_x, index_y = self._find_index()
         # extract widths along the 2 dimensions
         sigma_x, sigma_y = self._extract_widths()
 
-        return self.height, index_x * self.pix[0], sigma_x, index_y * self.pix[1], sigma_y
+        return self.height, index_x * self.pix[0], sigma_x, index_y * self.pix[1], sigma_y, self.floor
 
     @staticmethod
     def _gaussian(x:list[int],
                   height:float,
                   centre:float,
-                  sigma:float
+                  sigma:float,
+                  y_0:float
                   ) -> np.ndarray:
         """
         Defines the Gaussian function used for fitting the beam profile.
@@ -200,11 +217,38 @@ class BeamFit:
         -------
         np.ndarray : Gaussian function evaluated at the given x values.
         """
-        return height * np.exp(-(np.power(x - centre, 2) / (2 * sigma ** 2)))
+        return height * np.exp(-(np.power(x - centre, 2) / (2 * sigma ** 2))) + y_0
+    
+    @staticmethod
+    def _lorentzian(x:list[int],
+                  height:float,
+                  centre:float,
+                  gamma:float,
+                  y_0:float
+                  ) -> np.ndarray:
+        """
+        Defines the Lorentzian function used for fitting the beam profile.
+        
+        Parameters
+        ----------
+        x : list[int]
+            Array of x-values (positions) to evaluate the Lorentzian function.
+        height : float
+            The peak value of the Lorentzian (maximum intensity).
+        centre : float
+            The center position of the Lorentzian (mean).
+        gamma : float
+            The standard deviation (width) of the Lorentzian.
+        
+        Returns
+        -------
+        np.ndarray : Lorentzian function evaluated at the given x values.
+        """
+        return (height * ((0.5*gamma)**2/((x-centre)**2 + (0.5*gamma)**2))) + y_0
     
     def fit(self) -> tuple:
         """
-        Fits Gaussian functions to the beam profile in both x and y directions.
+        Fits Gaussian or Lorentzian profiles to the beam in both x and y directions.
         
         Returns
         -------
@@ -212,43 +256,52 @@ class BeamFit:
             fit_data : Array of fit parameters (height, center, sigma) for x and y.
             fit_err : Array of errors for the Gaussian fit parameters for x and y.
         """
+        model_funcs = {'gaussian': self._gaussian, 
+                       'lorentzian': self._lorentzian}
+        if self.model not in model_funcs:
+            raise ValueError(f"Invalid type '{self.model}'. Please choose from {model_funcs.keys()}")
+        
         params = self._moments()
         # extract data along index of maximum value
         row, col = self._find_vector()
         # generate positional arguments for gaussian
         x, y = self._dimensions()
-        bounds = ([0, 0, 0], [np.inf, np.inf, np.inf])
+        bounds = ([0, 0, 0, 0], [np.inf, np.inf, np.inf, np.inf])
         try:
             # fit gaussian to data and return probability
-            fit_x, success_x = curve_fit(self._gaussian, x, 
-                                        row, p0=(params[0], params[1], params[2]), bounds=bounds)
-            fit_y, success_y = curve_fit(self._gaussian, y, 
-                                        col, p0=(params[0], params[3], params[4]), bounds=bounds)
-            x_err = np.sqrt(np.diag(success_x))
-            y_err = np.sqrt(np.diag(success_y))
+            fit_x, cov_x = curve_fit(model_funcs[self.model], x, 
+                                        row, p0=(params[0], params[1], params[2], params[5]), bounds=bounds)
+            fit_y, cov_y = curve_fit(model_funcs[self.model], y, 
+                                        col, p0=(params[0], params[3], params[4], params[5]), bounds=bounds)
+            x_err = np.sqrt(np.diag(cov_x))
+            y_err = np.sqrt(np.diag(cov_y))
             # condense fit data into array for output
             return np.array([fit_x, fit_y]), np.array([x_err, y_err])
     
-        except RuntimeError:
-            print("Gaussian fit failed! Returning zeros.")
+        except RuntimeError as e:
+            print(f"Fit failed: {e}! Returning zeros.")
             return np.zeros((2, 3)), np.zeros((2, 3))
-    
-    def create_gaussian(self) -> tuple:
+        
+    def create_profile(self) -> tuple:
         """
-        Generates the Gaussian profile based on the fitted parameters for both x and y directions.
+        Generates the appropriate profile based on the fitted parameters for both x and y directions.
         
         Returns
         -------
         tuple : (x_profile, y_profile)
-            x_profile : Gaussian profile along the x-axis.
-            y_profile : Gaussian profile along the y-axis.
+            x_profile : Profile along the x-axis.
+            y_profile : Profile along the y-axis.
         """
         lengths = self._dimensions()
-        x = self._gaussian(lengths[0], *self.fit()[0][0])
-        y = self._gaussian(lengths[1], *self.fit()[0][1])
+        if self.model == 'gaussian':
+            x = self._gaussian(lengths[0], *self.fit()[0][0])
+            y = self._gaussian(lengths[1], *self.fit()[0][1])
+        else:
+            x = self._lorentzian(lengths[0], *self.fit()[0][0])
+            y = self._lorentzian(lengths[1], *self.fit()[0][1])
         
         return x, y
-
+    
     def _dimensions(self) -> tuple[np.ndarray, np.ndarray]:
         """
         Returns the x and y coordinate arrays in real-world dimensions.
@@ -371,10 +424,16 @@ class BeamFit:
             return np.abs(self._to_waist(fit_data[0][2])), (self._to_waist(fit_err[0][2]))
         else:
             return np.abs(self._to_waist(fit_data[1][2])), (self._to_waist(fit_err[1][2]))
-    
-    @staticmethod
-    def _to_waist(value):
+
+    def _to_waist(self,
+                  value:float
+                  ) -> float:
         """
-        Convert beam standard deviation to beam waist (1/e^2)
+        Convert beam width to beam waist (1/e^2)
         """
-        return 2*value
+        if self.model == 'gaussian':
+            # gaussian
+            return 2*value
+        else:
+            # lorentzian
+            return value

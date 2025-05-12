@@ -68,18 +68,24 @@ class BeamProcessor:
                 directory:str,
                 chipsize:list[float],
                 wavelength:float=1550E-6,
-                n:float=1.003
+                n:float=1.003,
+                model:str='gaussian'
                 ) -> None:
         
         self.chipsize = chipsize
         self.directory = directory
         self.wavelength = wavelength
         self.n = n
+        self.model = model
         self.zpos = self._get_zpos()
         self.images = self._load_images()
         self.pix = self._get_pix_size()
         self.processed = self._process_images()
-        self.plotter = BeamPlot(self.images, self.processed, self.pix, self.wavelength, self.n)
+        self.plotter = BeamPlot(self.images, 
+                                self.processed, 
+                                self.wavelength, 
+                                self.n, 
+                                self.model)
 
     def _join(self, 
               fname:str
@@ -305,7 +311,7 @@ class BeamProcessor:
         for m in range(num_images//2):
             processed.append(self._norm_image(self.images[2 * m], self.images[2 * m + 1]))
         
-        return [BeamFit(image, z, self.pix) for image, z in zip(processed, self.zpos)]
+        return [BeamFit(image, z, self.pix, self.model) for image, z in zip(processed, self.zpos)]
     
     def fit_beam(self, verbose=True):
         """

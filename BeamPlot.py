@@ -44,9 +44,9 @@ class BeamPlot:
     def __init__(self,
                  raw,
                  processed,
-                 pixsize,
                  wavelength,
-                 n=1.003
+                 n=1.003,
+                 model='gaussian'
                  ) -> None:
         """
         Initializes the BeamPlot instance with the necessary data.
@@ -73,8 +73,6 @@ class BeamPlot:
             raise ValueError("No raw images provided")
         if not processed:
             raise ValueError("No processed images provided")
-        if not pixsize:
-            raise ValueError("No pixel sizes provided")
         if not wavelength:
             raise ValueError("Wavelength not provided")
         
@@ -82,6 +80,7 @@ class BeamPlot:
         self.processed = processed
         self.wavelength = wavelength
         self.n = n
+        self.model = model
 
     @staticmethod
     def _dimensions(data) -> tuple:
@@ -201,7 +200,7 @@ class BeamPlot:
         data = self.processed[index]
         x, y = self._dimensions(data)
         data_x, data_y = data._find_vector()
-        amp_x, amp_y = data.create_gaussian()
+        amp_x, amp_y = data.create_profile()
         # create figure and axes
         fig, ax = mp.subplots()
         divider = make_axes_locatable(ax)
@@ -212,10 +211,10 @@ class BeamPlot:
         ax_right.yaxis.set_tick_params(labelleft=False)
         # plot the x fit and real data
         ax_top.plot(x, data_x, label=' X Data', alpha=0.75)
-        ax_top.plot(x, amp_x, linestyle ='--', label='Fit in X')
+        ax_top.plot(x, amp_x, linestyle ='--', label='Fit')
         # plot the y fit and real data
         ax_right.plot(data_y, y, label='Y Data', alpha=0.75)
-        ax_right.plot(amp_y, y, linestyle ='--', label='Fit in Y')
+        ax_right.plot(amp_y, y, linestyle ='--', label='Fit')
         # crop if required
         if crop:
             lims = self._crop(data)
@@ -276,7 +275,12 @@ class BeamPlot:
                                          y_results[0][1], self.wavelength, self.n), 
                                          label='$\omega_{0}$ y-fit', linestyle='--')
         # Set labels and legend
-        ax.set(xlabel=('Z Position (mm)'), ylabel=('1/e$^{2}$ Beam Waist (mm)'))
+        if self.model == 'gaussian':
+            fmt_label = '1/e$^{2}$ Beam Waist (mm)'
+        else:
+            fmt_label = 'FWHM Beam Waist (mm)'
+        ax.set(xlabel=('Z Position (mm)'), ylabel=(fmt_label))
+
         ax.legend(loc='best')
 
         return fig, ax
